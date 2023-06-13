@@ -27,7 +27,7 @@ app.use(
       path: "/",
       secure: false,
     },
-    name: "launch-school-todos-session-id",
+    name: "learn-session-id",
     resave: false,
     saveUninitialized: true,
     secret: process.env.SECRET,
@@ -53,7 +53,7 @@ app.use((req, res, next) => {
 
 // Extract session info
 app.use((req, res, next) => {
-  res.locals.username = req.session.username;
+  res.locals.user_id = req.session.user_id;
   res.locals.signedIn = req.session.signedIn;
   res.locals.flash = req.session.flash;
   delete req.session.flash;
@@ -61,7 +61,7 @@ app.use((req, res, next) => {
 });
 
 app.post("/signout", (req, res) => {
-  delete req.session.username;
+  delete req.session.user_id;
   delete req.session.signedIn;
 
   res.redirect("/signin");
@@ -69,95 +69,130 @@ app.post("/signout", (req, res) => {
 
 // Redirect start page
 app.get("/", (req, res) => {
-  res.redirect("/lists");
+  console.log("redirecting to /courses");
+  res.redirect("/courses");
 });
 
-// Render the list of todo lists
+// Render the course of todo courses
 app.get(
-  "/lists",
+  "/courses",
   requiresAuthentication,
   catchError(async (req, res, next) => {
     let store = res.locals.store;
-    let todoLists = await store.sortedTodoLists();
+    let courses = await store.sortedCourses();
 
-    let todosInfo = todoLists.map((todoList) => ({
-      countAllTodos: todoList.todos.length,
-      countDoneTodos: todoList.todos.filter((todo) => todo.done).length,
-      isDone: store.isDoneTodoList(todoList),
-    }));
+    console.log("courses", courses);
 
-    res.render("lists", {
-      todoLists,
-      todosInfo,
-      username: res.locals.username,
-      isSignedIn: res.locals.signedIn,
+    res.render("courses", {
+      courses,
     });
   })
 );
 
-// Render new todo list page
-app.get("/lists/new", (req, res) => {
-  requiresAuthentication, res.render("new-list");
+// Render new course page
+app.get("/courses/new", (req, res) => {
+  requiresAuthentication, res.render("new-course");
 });
 
-// Create a new todo list
+// Create a new todo course
 app.post(
-  "/lists",
+  "/courses",
   requiresAuthentication,
   [
-    body("todoListTitle")
+    body("courseTitle")
       .trim()
       .isLength({ min: 1 })
-      .withMessage("The list title is required.")
+      .withMessage("The course title is required.")
       .isLength({ max: 100 })
       .withMessage("List title must be between 1 and 100 characters."),
   ],
   catchError(async (req, res, next) => {
     let errors = validationResult(req);
-    let todoListTitle = req.body.todoListTitle;
+    let courseTitle = req.body.courseTitle;
 
-    const rerenderNewList = () => {
-      res.render("new-list", {
-        todoListTitle,
+    const rerenderNewCourse = () => {
+      res.render("new-course", {
+        courseTitle,
         flash: req.flash(),
       });
     };
 
     if (!errors.isEmpty()) {
       errors.array().forEach((message) => req.flash("error", message.msg));
-      rerenderNewList();
-    } else if (await res.locals.store.existsTodoListTitle(todoListTitle)) {
-      req.flash("error", "The list title must be unique.");
-      rerenderNewList();
+      rerenderNewCourse();
+    } else if (await res.locals.store.existsCourseTitle(courseTitle)) {
+      req.flash("error", "The course title must be unique.");
+      rerenderNewCourse();
     } else {
-      let created = await res.locals.store.createTodoList(todoListTitle);
+      let created = await res.locals.store.createcourse(courseTitle);
       if (!created) {
-        next(new Error("Failed to create todo list."));
+        next(new Error("Failed to create todo course."));
       } else {
-        req.flash("success", "The todo list has been created.");
-        res.redirect("/lists");
+        req.flash("success", "The todo course has been created.");
+        res.redirect("/courses");
       }
     }
   })
 );
 
-// Render individual todo list and its todos
+// Create a new flashcard course
+app.post(
+  "/courses/new",
+  requiresAuthentication,
+  [
+    body("courseTitle")
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("The course title is required.")
+      .isLength({ max: 100 })
+      .withMessage("List title must be between 1 and 100 characters."),
+  ],
+  catchError(async (req, res, next) => {
+    let errors = validationResult(req);
+    let courseTitle = req.body.courseTitle;
+
+    const rerenderNewCourse = () => {
+      res.render("new-course", {
+        courseTitle,
+        flash: req.flash(),
+      });
+    };
+
+    if (!errors.isEmpty()) {
+      errors.array().forEach((message) => req.flash("error", message.msg));
+      rerenderNewCourse();
+    } else if (await res.locals.store.existsCourseTitle(courseTitle)) {
+      req.flash("error", "The course title must be unique.");
+      rerenderNewCourse();
+    } else {
+      let created = await res.locals.store.createCourse(courseTitle);
+      if (!created) {
+        next(new Error("Failed to create course."));
+      } else {
+        req.flash("success", "The course has been created.");
+        res.redirect("/courses");
+      }
+    }
+  })
+);
+
+// Render individual course and its todos
 app.get(
-  "/lists/:todoListId",
+  "/courses/:courseId",
   requiresAuthentication,
   catchError(async (req, res, next) => {
-    let todoListId = req.params.todoListId;
-    let todoList = await res.locals.store.loadTodoList(+todoListId);
+    let courseId = req.params.courseId;
+    let course = await res.locals.store.loadCourse(+courseId);
 
-    if (todoList === undefined) {
+    if (course === undefined) {
       next(new Error("Not found."));
     } else {
-      todoList.todos = await res.locals.store.sortedTodos(todoList);
+      course.todos = await res.locals.store.sortedTodos(course);
 
-      res.render("list", {
-        todoList,
-        isDoneTodoList: res.locals.store.isDoneTodoList(todoList),
-        hasUndoneTodos: res.locals.store.hasUndoneTodos(todoList),
+      res.render("course", {
+        course,
+        isDonecourse: res.locals.store.isDoneCourse(course),
+        hasUndoneTodos: res.locals.store.hasUndoneTodos(course),
       });
     }
   })
@@ -165,61 +200,61 @@ app.get(
 
 // Toggle completion status of a todo
 app.post(
-  "/lists/:todoListId/todos/:todoId/toggle",
+  "/courses/:courseId/todos/:todoId/toggle",
   requiresAuthentication,
   catchError(async (req, res, next) => {
-    let { todoListId, todoId } = req.params;
-    let toggled = await res.locals.store.toggleDoneTodo(+todoListId, +todoId);
+    let { courseId, todoId } = req.params;
+    let toggled = await res.locals.store.toggleDoneTodo(+courseId, +todoId);
     if (!toggled) {
       next(new Error("Not found."));
     } else {
-      let todo = await res.locals.store.loadTodo(+todoListId, +todoId);
+      let todo = await res.locals.store.loadTodo(+courseId, +todoId);
       if (todo.done) {
         req.flash("success", `"${todo.title}" marked done.`);
       } else {
         req.flash("success", `"${todo.title}" marked as NOT done!`);
       }
 
-      res.redirect(`/lists/${todoListId}`);
+      res.redirect(`/courses/${courseId}`);
     }
   })
 );
 
 // Delete a todo
 app.post(
-  "/lists/:todoListId/todos/:todoId/destroy",
+  "/courses/:courseId/todos/:todoId/destroy",
   requiresAuthentication,
   catchError(async (req, res, next) => {
-    let { todoListId, todoId } = req.params;
+    let { courseId, todoId } = req.params;
 
-    let deleted = await res.locals.store.deleteTodo(+todoListId, +todoId);
+    let deleted = await res.locals.store.deleteTodo(+courseId, +todoId);
     if (!deleted) {
       next(new Error("Not found."));
     } else {
       req.flash("success", "The todo has been deleted.");
-      res.redirect(`/lists/${todoListId}`);
+      res.redirect(`/courses/${courseId}`);
     }
   })
 );
 
 // Mark all todos as done
 app.post(
-  "/lists/:todoListId/complete_all",
+  "/courses/:courseId/complete_all",
   requiresAuthentication,
   catchError(async (req, res, next) => {
-    let todoListId = req.params.todoListId;
-    if (await !res.locals.store.completeAllTodos(+todoListId)) {
+    let courseId = req.params.courseId;
+    if (await !res.locals.store.completeAllTodos(+courseId)) {
       next(new Error("Not found."));
     } else {
       req.flash("success", "All todos have been marked as done.");
-      res.redirect(`/lists/${todoListId}`);
+      res.redirect(`/courses/${courseId}`);
     }
   })
 );
 
-// Create a new todo and add it to the specified list
+// Create a new todo and add it to the specified course
 app.post(
-  "/lists/:todoListId/todos",
+  "/courses/:courseId/todos",
   requiresAuthentication,
   [
     body("todoTitle")
@@ -230,95 +265,95 @@ app.post(
       .withMessage("Todo title must be between 1 and 100 characters."),
   ],
   catchError(async (req, res, next) => {
-    let todoListId = req.params.todoListId;
-    let todoList = await res.locals.store.loadTodoList(+todoListId);
+    let courseId = req.params.courseId;
+    let course = await res.locals.store.loadcourse(+courseId);
     let todoTitle = req.body.todoTitle;
 
-    if (!todoList) {
+    if (!course) {
       next(new Error("Not found."));
     } else {
       let errors = validationResult(req);
       if (!errors.isEmpty()) {
         errors.array().forEach((message) => req.flash("error", message.msg));
 
-        todoList.todos = await res.locals.store.sortedTodos(todoList);
+        course.todos = await res.locals.store.sortedTodos(course);
 
-        res.render("list", {
-          todoList,
+        res.render("course", {
+          course,
           todoTitle,
-          isDoneTodoList: res.locals.store.isDoneTodoList(todoList),
-          hasUndoneTodos: res.locals.store.hasUndoneTodos(todoList),
+          isDonecourse: res.locals.store.isDonecourse(course),
+          hasUndoneTodos: res.locals.store.hasUndoneTodos(course),
           flash: req.flash(),
         });
       } else {
-        let created = await res.locals.store.createTodo(+todoListId, todoTitle);
+        let created = await res.locals.store.createTodo(+courseId, todoTitle);
         if (!created) {
           next(new Error("Not found."));
         } else {
           req.flash("success", "The todo has been created.");
-          res.redirect(`/lists/${todoListId}`);
+          res.redirect(`/courses/${courseId}`);
         }
       }
     }
   })
 );
 
-// Render edit todo list form
+// Render edit todo course form
 app.get(
-  "/lists/:todoListId/edit",
+  "/courses/:courseId/edit",
   requiresAuthentication,
   catchError(async (req, res, next) => {
-    let todoListId = req.params.todoListId;
-    let todoList = await res.locals.store.loadTodoList(+todoListId);
-    if (!todoList) {
+    let courseId = req.params.courseId;
+    let course = await res.locals.store.loadcourse(+courseId);
+    if (!course) {
       next(new Error("Not found."));
     } else {
-      res.render("edit-list", { todoList });
+      res.render("edit-course", { course });
     }
   })
 );
 
-// Delete todo list
+// Delete todo course
 app.post(
-  "/lists/:todoListId/destroy",
+  "/courses/:courseId/destroy",
   requiresAuthentication,
   catchError(async (req, res, next) => {
-    let todoListId = +req.params.todoListId;
-    let deleted = await res.locals.store.deleteTodoList(+todoListId);
+    let courseId = +req.params.courseId;
+    let deleted = await res.locals.store.deletecourse(+courseId);
     if (!deleted) {
       next(new Error("Not found."));
     } else {
-      req.flash("success", "Todo list deleted.");
-      res.redirect("/lists");
+      req.flash("success", "Todo course deleted.");
+      res.redirect("/courses");
     }
   })
 );
 
-// Edit todo list title
+// Edit todo course title
 app.post(
-  "/lists/:todoListId/edit",
+  "/courses/:courseId/edit",
   requiresAuthentication,
   [
-    body("todoListTitle")
+    body("courseTitle")
       .trim()
       .isLength({ min: 1 })
-      .withMessage("The list title is required.")
+      .withMessage("The course title is required.")
       .isLength({ max: 100 })
       .withMessage("List title must be between 1 and 100 characters."),
   ],
   catchError(async (req, res, next) => {
     let store = res.locals.store;
-    let todoListId = req.params.todoListId;
-    let todoListTitle = req.body.todoListTitle;
+    let courseId = req.params.courseId;
+    let courseTitle = req.body.courseTitle;
 
     const rerenderEditList = async () => {
-      let todoList = await store.loadTodoList(+todoListId);
-      if (!todoList) {
+      let course = await store.loadcourse(+courseId);
+      if (!course) {
         next(new Error("Not found."));
       } else {
-        res.render("edit-list", {
-          todoListTitle,
-          todoList,
+        res.render("edit-course", {
+          courseTitle,
+          course,
           flash: req.flash(),
         });
       }
@@ -328,16 +363,14 @@ app.post(
     if (!errors.isEmpty()) {
       errors.array().forEach((message) => req.flash("error", message.msg));
       await rerenderEditList();
-    } else if (await res.locals.store.existsTodoListTitle(todoListTitle)) {
-      req.flash("error", "The list title must be unique.");
+    } else if (await res.locals.store.existsCourseTitle(courseTitle)) {
+      req.flash("error", "The course title must be unique.");
       await rerenderEditList();
-    } else if (
-      await !res.locals.store.setTodoListTitle(+todoListId, todoListTitle)
-    ) {
+    } else if (await !res.locals.store.setcourseTitle(+courseId, courseTitle)) {
       next(new Error("Not found."));
     } else {
-      req.flash("success", "Todo list updated.");
-      res.redirect(`/lists/${todoListId}`);
+      req.flash("success", "Todo course updated.");
+      res.redirect(`/courses/${courseId}`);
     }
   })
 );
@@ -378,7 +411,10 @@ app.post(
     let username = req.body.username.trim();
     let password = req.body.password;
 
-    const rerenderNewList = () => {
+    console.log("username", username);
+    console.log("password", password);
+
+    const rerenderNewCourse = () => {
       res.render("signup", {
         username,
         flash: req.flash(),
@@ -387,10 +423,10 @@ app.post(
 
     if (!errors.isEmpty()) {
       errors.array().forEach((message) => req.flash("error", message.msg));
-      rerenderNewList();
-    } else if (await res.locals.store.existsUser(username)) {
+      rerenderNewCourse();
+    } else if (await res.locals.store.existsUser({ username, password })) {
       req.flash("error", "Invalid credentials.");
-      rerenderNewList();
+      rerenderNewCourse();
     } else {
       let created = await res.locals.store.createUser({ username, password });
       if (!created) {
@@ -399,7 +435,7 @@ app.post(
         req.session.username = username;
         req.session.signedIn = true;
         req.flash("info", "Welcome!");
-        res.redirect("/lists");
+        res.redirect("/courses");
       }
     }
   })
@@ -421,7 +457,7 @@ app.post(
     let username = req.body.username.trim();
     let password = req.body.password;
 
-    const rerenderNewList = () => {
+    const rerenderNewCourse = () => {
       res.render("signin", {
         username,
         flash: req.flash(),
@@ -431,19 +467,19 @@ app.post(
     const authenticated = await res.locals.store.authenticate({
       username,
       password,
+      session,
     });
 
     if (!errors.isEmpty()) {
       errors.array().forEach((message) => req.flash("error", message.msg));
-      rerenderNewList();
+      rerenderNewCourse();
     } else if (!authenticated) {
       req.flash("error", "Invalid credentials.");
-      rerenderNewList();
+      rerenderNewCourse();
     } else {
-      req.session.username = username;
       req.session.signedIn = true;
       req.flash("info", "Welcome!");
-      res.redirect("/lists");
+      res.redirect("/courses");
     }
   })
 );
@@ -456,5 +492,5 @@ app.use((err, req, res, _next) => {
 
 // Listener
 app.listen(port, host, () => {
-  console.log(`Todos is listening on port ${port} of ${host}!`);
+  console.log(`App is listening on port ${port} of ${host}!`);
 });
