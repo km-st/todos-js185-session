@@ -3,7 +3,7 @@ doctype html
 html(lang="en-US")
 
   head
-    title Todo App
+    title Flashcard App
     meta(charset="UTF-8")
     link(rel="stylesheet" href="//fonts.googleapis.com/css?family=PT+Sans")
     link(rel="stylesheet" href="/stylesheets/whitespace-reset.css")
@@ -12,7 +12,7 @@ html(lang="en-US")
 
   body
     header
-      h1 Todo Tracker
+      h1 Flashcards
       block headerLinks
 
     main
@@ -22,9 +22,9 @@ html(lang="en-US")
           each kind in kinds
             each message in flash[kind]
               li.flash(class=kind)= message
-
+    
       block main
-
+    
     footer
       block signin
         if isSignedIn

@@ -1,0 +1,13 @@
+extends layout
+
+block main
+  h1 Decks
+  ul
+    each deck in decks
+      li
+        a(href=`/decks/${deck.id}/cards`) #{deck.title}
+        form(action=`/decks/${deck.id}?_method=DELETE`, method='POST')
+          input(type='hidden', name='_method', value='DELETE')
+          button(type='submit') Delete
+  p
+    a(href='/decks/new') New Deck

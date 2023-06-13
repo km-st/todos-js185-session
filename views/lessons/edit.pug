@@ -1,0 +1,7 @@
+extends layout
+
+block content
+  h1 Edit Card for #{deck.name}
+  form(action=`/decks/${deck.id}/cards/${card.id}?_method=PUT`, method='POST')
+    input(type='hidden', name='_method', value='PUT')
+    label(for='frontText')

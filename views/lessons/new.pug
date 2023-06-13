@@ -1,0 +1,22 @@
+extends layout
+
+block content
+  h1 New Card for #{deck.name}
+  form(action=`/decks/${deck.id}/cards`, method='POST')
+    label(for='frontText') Front text:
+    input(type='text', name='frontText')
+    label(for='backText') Back text:
+    input(type='text', name='backText')
+    label(for='frontImage') Front image:
+    input(type='text', name='frontImage')
+    label(for='backImage') Back image:
+    input(type='text', name='backImage')
+    label(for='frontAudio') Front audio:
+    input(type='text', name='frontAudio')
+    label(for='backAudio') Back audio:
+    input(type='text', name='backAudio')
+    label(for='frontLanguage') Front language:
+    input(type='text', name='frontLanguage')
+    label(for='backLanguage') Back language:
+    input(type='text', name='backLanguage')
+    button(type='submit') Create

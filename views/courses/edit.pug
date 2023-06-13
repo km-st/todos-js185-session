@@ -1,0 +1,12 @@
+extends layout
+
+block content
+  h1 Edit Deck
+  form(action=`/decks/${deck.id}?_method=PUT`, method='POST')
+    input(type='hidden', name='_method', value='PUT')
+    label(for='name') Name:
+    input(type='text', name='name', value=`${deck.name}`)
+    button(type='submit') Save
+  form(action=`/decks/${deck.id}?_method=DELETE`, method='POST')
+    input(type='hidden', name='_method', value='DELETE')
+    button(type='submit') Delete

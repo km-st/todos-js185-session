@@ -1,0 +1,11 @@
+extends layout
+
+block main
+  h1 New Deck
+  form(action='/decks/new', method='POST')
+    label(for='title') Title:
+    input(type='text', name='title')
+
+  fieldset.actions
+      input(type="submit" value="Save")
+      a(href="/decks") Cancel
